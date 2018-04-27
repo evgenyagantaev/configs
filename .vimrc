@@ -1,6 +1,7 @@
 set exrc
 set secure
 
+set scrolloff=5
 set ts=4
 set number
 sy on
@@ -102,12 +103,12 @@ if has("cscope")
     set csto=0
 
     " add any cscope database in current directory
-    "if filereadable("cscope.out")
-        "cs add cscope.out  
+    if filereadable("cscope.out")
+        cs add cscope.out  
     " else add the database pointed to by environment variable 
-    "elseif $CSCOPE_DB != ""
-        "cs add $CSCOPE_DB
-    "endif
+    elseif $CSCOPE_DB != ""
+        cs add $CSCOPE_DB
+    endif
 
     " show msg when any other cscope db added
     set cscopeverbose  
@@ -225,5 +226,39 @@ if has("cscope")
     set ttimeoutlen=2000
 
 endif
+
+
+if version >= 702
+    set history=64
+    set undolevels=128
+    set undodir=~/.vim/undodir/
+    set undofile
+    set undolevels=1000
+    set undoreload=10000
+endif
+
+function! ChangeBuf(cmd)
+    if (&modified && &modifiable)
+        execute ":w"
+    endif
+    execute a:cmd
+endfunction
+nnoremap <silent> <C-o> :call ChangeBuf(":b#")<CR>
+nnoremap <silent> <C-n> :call ChangeBuf(":bn")<CR>
+nnoremap <silent> <C-p> :call ChangeBuf(":bp")<CR>
+
+function! BufList()
+    let status = ""
+    for i in range(1, last_buffer_nr()+1)
+        if bufnr("%") == i 
+            let status = status . '   ' . '[' . bufname(i) . ']' "объединяем строки
+            continue
+        endif
+        if buflisted(i)
+            let status = status . '   ' . bufname(i)
+        endif
+    endfor
+    return status
+endfunction
 
 	

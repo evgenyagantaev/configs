@@ -1,0 +1,422 @@
+"
+" Comments/uncomments strings and selected text
+" When buffer changing try to save it
+" Convinient view of statusline
+" AutoResave sessions on exit
+" Auto settings for DJANGO omni completion
+"
+"Mapped Keys
+" Mode  Combination Description
+" N     <C-n>       Next buffer with saving if possible
+" N     <C-p>       Prev buffer with saving if possible
+" N     <C-o>       Last viewed buffer
+" N     <C-e>       Clear highlighting after searching
+" I     <C-q>       Set normal mode
+" N     <C-c>       Comment Lines
+" N     <C-u>       Uncomment Lines
+" I     <C-Space>   Show popup menu OmniCompletion
+" I     <Tab>       If popupmenu is showed list it elements
+" NIV   <F5>        Bonding Mode(useful when pasting from X-buffer)
+" I     <A-h>       Left in insert mode
+" I     <A-j>       Down in insert mode
+" I     <A-k>       Up in insert mode
+" I     <A-l>       Right in insert mode
+" N     ,p          Paste after
+" N     ,P          Paste before
+" N     <C-j>       Down in long line
+" N     <C-k>       Up in long line
+" V     <C-c>       Comment Line
+" V     <C-u>       Uncomment Line
+
+filetype on
+filetype plugin on
+
+set tabstop=4
+set shiftwidth=4
+set smarttab
+set expandtab
+set softtabstop=4
+set autoindent
+let python_highlight_all = 1
+set t_Co=256
+autocmd FileType html,xhtml,xml,htmldjango,htmljinja,eruby,mako setlocal noexpandtab
+autocmd FileType *.py set tw=80
+autocmd FileType python nnoremap <C-a> :call WriteDocstrings()<CR>
+"nnoremap <C-a> :call WriteDocstrings()<CR>
+autocmd BufWritePre *.py normal m`:%s/\s\+$//e ``
+autocmd BufRead *.py set smartindent cinwords=if,elif,else,for,while,try,except,finally,def,class
+autocmd BufNewFile *.py call WritePyinit()
+autocmd VimLeave * !reset
+set nu
+set ruler
+set mousehide
+syntax on
+set backspace=indent,eol,start whichwrap+=<,>,[,]
+set showtabline=0
+set foldcolumn=1
+set wrap
+set linebreak
+set nobackup
+set noswapfile
+set encoding=utf-8
+set fileencodings=utf8,cp1251
+"Searchig options
+set showmatch
+set hlsearch
+set incsearch
+"Layouts
+set fencs=utf-8,cp1251,koi8-r,ucs-2,cp866
+"memory, history, undotree
+if version >= 700
+    set history=64
+    set undolevels=128
+    set undodir=~/.vim/undodir/
+    set undofile
+    set undolevels=1000
+    set undoreload=10000
+endif
+"Sessions - сохранение текущих буферов, регистров.
+set sessionoptions=buffers,tabpages,help,blank,globals,localoptions,sesdir,slash,options
+function! SaveSession(...)
+    if v:this_session != ""
+        function Tmp(filename)
+            execute ":mksession! ".v:this_session
+        endfunction
+        autocmd VimLeavePre * :call Tmp("xxx")
+    endif
+endfunction
+au SessionLoadPost * :call SaveSession()
+"Titles, statuses
+set laststatus=2
+set showtabline=2
+set title
+set statusline=%1*%m%*%2*%r%*%3*%h%w%*%{expand(\"%:p:~\")}\ %<
+set statusline+=%=Col:%3*%03c%*\ Ln:%3*%04l/%04L%*
+set statusline+=%(\ File:%3*%{join(filter([&filetype,&fileformat!=split(&fileformats,\",\")[0]?&fileformat:\"\",&fileencoding!=split(&fileencodings,\",\")[0]?&fileencoding:\"\"],\"!empty(v:val)\"),\"/\")}%*%)
+set titlestring=%t%(\ %m%)%(\ %r%)%(\ %h%)%(\ %w%)%(\ (%{expand(\"%:p:~:h\")})%)\ -\ VIM
+
+"autocmd VimLeavePre * silent mksession! ~/.vim/lastSession.vim
+"autocmd VimEnter * silent source! ~/.vim/lastSession.vim
+""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+set langmap=йq,цw,уe,кr,еt,нy,гu,шi,щo,зp,х[,ъ],фa,ыs,вd,аf,пg,рh,оj,лk,дl,ж\\;,э',яz,чx,сc,мv,иb,тn,ьm,б\\,,ю.,ё`,ЙQ,ЦW,УE,КR,ЕT,НY,ГU,ШI,ЩO,ЗP,Х{,Ъ},ФA,ЫS,ВD,АF,ПG,РH,ОJ,ЛK,ДL,Ж:,Э\\",ЯZ,ЧX,СC,МV,ИB,ТN,ЬM,Б<,Ю>,Ё~
+"Buffers
+function! ChangeBuf(cmd)
+    if (&modified && &modifiable)
+        execute ":w"
+    endif
+    execute a:cmd
+endfunction
+nnoremap <silent> <C-o> :call ChangeBuf(":b#")<CR>
+nnoremap <silent> <C-n> :call ChangeBuf(":bn")<CR>
+nnoremap <silent> <C-p> :call ChangeBuf(":bp")<CR>
+nnoremap <C-CR> O<ESC>j
+inoremap <C-q> <ESC>
+nnoremap <C-e> :nohlsearch<CR>
+inoremap <C-e> <ESC>I
+inoremap <C-a> <ESC>A
+function! BufList()
+    let status = ""
+    for i in range(1, last_buffer_nr()+1)
+        if bufnr("%") == i
+            let status = status . '   ' . '[' . bufname(i) . ']'
+            continue
+        endif
+        if buflisted(i)
+            let status = status . '   ' . bufname(i)
+        endif
+    endfor
+    return status
+endfunction
+"Copy/Paste
+if has("clipboard")
+    set clipboard=autoselect
+endif
+"Autoaddition
+set formatoptions-=o
+
+"scripting
+function ModeChange()
+    if getline(1) =~ "^#!"
+        if getline(1) =~ "bin/"
+            silent !chmod a+x <afile>
+        endif
+    endif
+endfunction
+au BufWritePost * call ModeChange()
+if expand("%:t") =~ "py$"
+    set makeprg=python 
+endif
+if expand("%:t") =~ "sh$"
+    set makeprg=/bin/bash 
+endif
+
+if !has("gui_running")
+    imap <C-@> <C-X><C-O>
+else
+    imap <C-Space> <C-X><C-O>
+endif
+
+filetype plugin on
+set ofu=syntaxcomplete#Complete
+set complete=.,b,t,k,u,k
+set completeopt-=preview 
+set completeopt+=longest 
+autocmd FileType python set omnifunc=pythoncomplete#Complete
+autocmd FileType javascript set omnifunc=javascriptcomplete#CompleteJS
+autocmd FileType html set omnifunc=htmlcomplete#CompleteTags
+autocmd FileType css set omnifunc=csscomplete#CompleteCSS
+if expand("%:t") =~ "^.*\.py$"
+   let $PYTHONPATH = fnamemodify("%", ":p:h:h")
+   let $DJANGO_SETTINGS_MODULE = fnamemodify("%", ":p:h:t").".settings"
+endif
+set completeopt=longest,menuone
+"Режим склейки при вставке
+"set paste 
+"set nopaste
+"set invpaste
+set pastetoggle=<F5>
+
+"Folding
+set foldenable
+set foldmethod=syntax
+autocmd FileType tex set foldmethod=indent
+
+
+"Цветовая схема
+"color blackboard
+let g:solarized_termcolors=256
+colorscheme solarized
+set background=dark
+
+
+"Remaps
+inoremap <A-h> <C-o>h
+inoremap <A-j> <C-o>j
+inoremap <A-k> <C-o>k
+inoremap <A-l> <C-o>l
+
+nnoremap ,p o<ESC>p
+nnoremap ,P O<ESC>p
+
+nnoremap <C-j> gj
+nnoremap <C-k> gk
+
+"Автокомменты
+nnoremap  <C-c> :call CommentLine()<cr>
+nnoremap  <C-u> :call UnCommentLine()<cr>
+vmap  <C-c> :call CommentLine()<cr>
+vmap  <C-u> :call UnCommentLine()<cr>
+"скрипты
+
+function! WritePyinit()
+    let @q = "
+    \#\!/usr/bin/env python\n\#-*- encoding: utf-8 -*-\n\nimport sys, warnings\n\nwarnings.simplefilter('always')\n\ndef main(argv=sys.argv):\n    pass\n\nif __name__ == \"__main__\":\n           sys.exit(main())\n"
+    execute "0put q"
+endfunction
+
+function! WriteDocstrings()
+if !has('python')
+    echo "Error: Required vim compiled with +python"
+    finish
+endif
+python <<EOF
+import vim
+import re
+linenr = vim.current.window.cursor[0]
+indentr = vim.current.window.cursor[0]
+line = vim.current.line
+n = 0
+for i in line:
+    if i != ' ':
+       break
+    n += 1
+if len(line) == 0:
+    n = 0
+vim.current.buffer.append(' '*n + ' '*4 + '"""', linenr)
+vim.current.buffer.append(' '*n + ' '*4 + '', linenr)
+vim.current.buffer.append(' '*n + ' '*4 + '"""', linenr)
+vim.current.window.cursor = (vim.current.window.cursor[0]+2, n+4)
+EOF
+endfunction
+""""""""""""""""
+"Для комметариев
+""""""""""""""""
+function __is_django_template()
+    let l:a = getpos(".")
+    if search("{\%.*\%}", '', line("$")) != 0
+        let b:b = cursor(l:a[1], l:a[2], "off")
+        return 1
+    endif
+    return 0
+endfunction
+
+function RetFileType()
+    let file_name = buffer_name("%")
+    if file_name =~ '\.vim'
+        return ["\"", ""]
+    elseif __is_django_template() == 1
+        return ['{% comment %}' , '{% endcomment %}']
+    elseif file_name =~ '\.html$' || file_name =~ '\.xhtml$' || file_name =~ '\.xml'
+        return ["<!--", "-->"]
+    endif
+    return ["#", ""]
+endfunction
+au BufEnter * let b:comment = RetFileType()
+function! CommentLine()
+    let stsymbol = b:comment[0]
+    let endsymbol = b:comment[1]
+    execute ":silent! normal 0i" . stsymbol . "\<ESC>A" . endsymbol . "\<ESC>"
+endfunction
+function! UnCommentLine()
+    let file_name = buffer_name("%")
+    let stsymbol = b:comment[0]
+    let endsymbol = b:comment[0]
+    execute ":silent! normal :s/^\s*" . stsymbol . "//\<CR>"
+    execute ":silent! normal :s/\s*" . endsymbol . "\s*$//\<CR>"
+endfunction
+let ropevim_vim_completion=1
+
+function! CmdLine(str)
+    exe "menu Foo.Bar :" . a:str
+    emenu Foo.Bar
+    unmenu Foo
+endfunction 
+
+" From an idea by Michael Naumann
+function! VisualSearch(direction) range
+    let l:saved_reg = @"
+    execute "normal! vgvy"
+
+    let l:pattern = escape(@", \/.*$^~[])
+    let l:pattern = substitute(l:pattern, "\n$", "", "")
+
+    if a:direction == b
+        execute "normal ?" . l:pattern . "^M"
+    elseif a:direction == gv
+        call CmdLine("vimgrep " . /. l:pattern . / .  **/*.)
+    elseif a:direction == f
+        execute "normal /" . l:pattern . "^M"
+    endif
+
+    let @/ = l:pattern
+    let @" = l:saved_reg
+endfunction
+
+"Basically you press * or # to search for the current selection
+vnoremap <silent> * :call VisualSearch('f')<CR>
+vnoremap <silent> # :call VisualSearch('b')<CR>
+vnoremap <silent> gv :call VisualSearch('gv')<CR>
+"PYDOC
+if exists('*s:ShowPyDoc') && g:pydoc_perform_mappings
+    call s:PerformMappings()
+    finish
+endif
+
+if !exists('g:pydoc_perform_mappings')
+    let g:pydoc_perform_mappings = 1
+endif
+
+if !exists('g:pydoc_highlight')
+    let g:pydoc_highlight = 1
+endif
+
+if !exists('g:pydoc_cmd')
+    let g:pydoc_cmd = 'pydoc'
+endif
+
+if !exists('g:pydoc_open_cmd')
+    let g:pydoc_open_cmd = 'split'
+endif
+
+setlocal switchbuf=useopen
+highlight pydoc cterm=reverse gui=reverse
+
+function s:ShowPyDoc(name, type)
+    if a:name == ''
+        return
+    endif
+
+    if g:pydoc_open_cmd == 'split'
+        let l:pydoc_wh = 10
+    endif
+
+    if bufloaded("__doc__")
+        let l:buf_is_new = 0
+        if bufname("%") == "__doc__"
+            " The current buffer is __doc__, thus do not
+            " recreate nor resize it
+            let l:pydoc_wh = -1
+        else
+            " If the __doc__ buffer is open, jump to it
+            silent execute "sbuffer" bufnr("__doc__")
+            let l:pydoc_wh = -1
+        endif
+    else
+        let l:buf_is_new = 1
+        silent execute g:pydoc_open_cmd '__doc__'
+        if g:pydoc_perform_mappings
+            call s:PerformMappings()
+        endif
+    endif
+
+    setlocal modifiable
+    setlocal noswapfile
+    setlocal buftype=nofile
+    setlocal bufhidden=delete
+    setlocal syntax=man
+
+    silent normal ggdG
+    " Remove function/method arguments
+    let s:name2 = substitute(a:name, '(.*', '', 'g' )
+    " Remove all colons
+    let s:name2 = substitute(s:name2, ':', '', 'g' )
+    if a:type == 1
+        execute  "silent read !" g:pydoc_cmd s:name2
+    else
+        execute  "silent read !" g:pydoc_cmd "-k" s:name2
+    endif
+    normal 1G
+
+    if exists('l:pydoc_wh') && l:pydoc_wh != -1
+        execute "silent resize" l:pydoc_wh
+    end
+
+    if g:pydoc_highlight == 1
+        execute 'syntax match pydoc' "'" . s:name2 . "'"
+    endif
+
+    let l:line = getline(2)
+    if l:line =~ "^no Python documentation found for.*$"
+        if l:buf_is_new
+            execute "bdelete!"
+        else
+            normal u
+            setlocal nomodified
+            setlocal nomodifiable
+        endif
+        redraw
+        echohl WarningMsg | echo l:line | echohl None
+    else
+        setlocal nomodified
+        setlocal nomodifiable
+    endif
+endfunction
+
+" Mappings
+function s:PerformMappings()
+    nnoremap <silent> <buffer> <Leader>pw :call <SID>ShowPyDoc('<C-R><C-W>', 1)<CR>
+    nnoremap <silent> <buffer> <Leader>pW :call <SID>ShowPyDoc('<C-R><C-A>', 1)<CR>
+    nnoremap <silent> <buffer> <Leader>pk :call <SID>ShowPyDoc('<C-R><C-W>', 0)<CR>
+    nnoremap <silent> <buffer> <Leader>pK :call <SID>ShowPyDoc('<C-R><C-A>', 0)<CR>
+
+    " remap the K (or 'help') key
+    nnoremap <silent> <buffer> K :call <SID>ShowPyDoc(expand("<cword>"), 1)<CR>
+endfunction
+
+if g:pydoc_perform_mappings
+    call s:PerformMappings()
+endif
+
+" Commands
+command -nargs=1 Pydoc       :call s:ShowPyDoc('<args>', 1)
+command -nargs=* PydocSearch :call s:ShowPyDoc('<args>', 0)
